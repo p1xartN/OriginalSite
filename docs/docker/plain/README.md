@@ -1,0 +1,1 @@
+This is the most basic configuration to run this image with docker compose.

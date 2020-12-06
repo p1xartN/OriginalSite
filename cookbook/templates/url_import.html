@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans 'URL Import' %}{% endblock %}
+
+{% block extra_head %}
+
+    {% include 'include/vue_base.html' %}
+
+    <script src="{% static 'js/vue-multiselect.min.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/vue-multiselect.min.css' %}">
+
+{% endblock %}
+
+{% block content %}
+
+    <div id="app">
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="input-group mb-3">
+                    <input class="form-control" v-model="remote_url" placeholder="{% trans 'Enter website URL' %}">
+                    <div class="input-group-append">
+                        <button @click="loadRecipe()" class="btn btn-primary shadow-none" type="button"
+                                id="id_btn_search"><i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <br/>
+
+        <div v-if="loading" class="text-center">
+            <br/>
+            <i class="fas fa-spinner fa-spin fa-8x"></i>
+        </div>
+
+        <template v-if="recipe_data !== undefined">
+
+            <form>
+                <div class="form-group">
+                    <label for="id_name">{% trans 'Recipe Name' %}</label>
+                    <input id="id_name" class="form-control" v-model="recipe_data.name">
+                </div>
+
+                <div class="row">
+                    <div class="col col-md-6" v-if="recipe_data.image !== ''">
+                        <img v-bind:src="recipe_data.image" alt="{% trans 'Recipe Image' %}"
+                             class="img-fluid img-responsive img-rounded">
+                    </div>
+                    <div class="col col-md-6">
+                        <div class="form-group">
+                            <label for="id_prep_time">{% trans 'Preparation time ca.' %}</label>
+                            <input id="id_prep_time" class="form-control" v-model="recipe_data.prepTime">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="id_waiting_time">{% trans 'Waiting time ca.' %}</label>
+                            <input id="id_waiting_time" class="form-control" v-model="recipe_data.cookTime">
+                        </div>
+                    </div>
+
+                </div>
+                <br/>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <template v-for="(i, index) in recipe_data.recipeIngredient">
+
+                            <div class="card" style="margin-top: 4px">
+                                <div class="card-body">
+                                    <div class="row" v-if="i.original">
+                                        <div class="col-md-12" style="margin-bottom: 4px">
+                                            <span class="text-muted"><i class="fas fa-globe"></i> [[i.original]]</span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-1">
+                                            <input class="form-control" v-model="i.amount">
+                                        </div>
+                                        <div class="col-md-4">
+
+                                            <table class="table-layout:fixed">
+                                                <col width="95%"/>
+                                                <col width="5%"/>
+                                                <tr>
+                                                    <td>
+                                                        <multiselect v-tabindex
+                                                                     ref="unit"
+                                                                     style="width: 100%!important;"
+                                                                     v-model="i.unit"
+                                                                     :options="units"
+                                                                     :close-on-select="true"
+                                                                     :clear-on-select="true"
+                                                                     :allow-empty="true"
+                                                                     :preserve-search="true"
+                                                                     placeholder="{% trans 'Select one' %}"
+                                                                     tag-placeholder="{% trans 'Select' %}"
+                                                                     label="text"
+                                                                     :taggable="true"
+                                                                     @tag="addUnitType"
+                                                                     :id="'unit_' + index"
+                                                                     @open="openUnitSelect"
+                                                                     track-by="id"
+                                                                     :multiple="false"
+                                                                     :loading="units_loading"
+                                                                     @search-change="searchUnits">
+                                                        </multiselect>
+                                                    </td>
+                                                    <td>
+                                                        <button class="btn btn-outline-success btn-lg" type="button"
+                                                                @click="i.unit = ''" tabindex="-1">
+                                                            <i class="fas fa-eraser"></i></button>
+                                                    </td>
+                                                </tr>
+                                            </table>
+
+
+                                        </div>
+                                        <div class="col-md-4">
+
+                                            <multiselect v-tabindex
+                                                         ref="ingredient"
+                                                         v-model="i.ingredient"
+                                                         :options="ingredients"
+                                                         :taggable="true"
+                                                         @tag="addIngredientType"
+                                                         :id="'ingredient_' + index"
+                                                         placeholder="{% trans 'Select one' %}"
+                                                         tag-placeholder="{% trans 'Select' %}"
+                                                         :close-on-select="true"
+                                                         :clear-on-select="true"
+                                                         :allow-empty="false"
+                                                         :preserve-search="true"
+                                                         label="text"
+                                                         track-by="id"
+                                                         :multiple="false"
+                                                         :loading="ingredients_loading"
+                                                         @search-change="searchIngredients"
+                                                         @open="openIngredientSelect">
+
+                                            </multiselect>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <input type="text" placeholder="{% trans 'Note' %}" class="form-control" v-model="i.note">
+                                        </div>
+                                        <div class="col-md-1">
+                                            <button class="btn btn-outline-danger btn-lg" type="button"
+                                                    @click="deleteIngredient(i)" tabindex="-1"><i
+                                                    class="fas fa-trash-alt"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                        </template>
+
+                        <div style="text-align: center; margin-top: 16px">
+                            <button class="btn btn-success" type="button" @click="addIngredient()"><i
+                                    class="fas fa-plus"></i></button>
+                            <br/><br/>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_instructions">{% trans 'Instructions' %}</label>
+                    <textarea id="id_instructions" class="form-control" v-model="recipe_data.recipeInstructions"
+                              rows="8"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_keywords">{% trans 'Keywords' %}</label>
+
+                    <multiselect
+                            v-model="recipe_data.keywords"
+                            :options="keywords"
+                            :close-on-select="false"
+                            :clear-on-select="true"
+                            :hide-selected="true"
+                            :preserve-search="true"
+                            placeholder="{% trans 'Select one' %}"
+                            label="text"
+                            track-by="id"
+                            id="id_keywords"
+                            :multiple="true"
+                            :loading="keywords_loading"
+                            @search-change="searchKeywords">
+                    </multiselect>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_all_keywords">{% trans 'All Keywords' %}</label><br/>
+                    <input id="id_all_keywords" type="checkbox"
+                           v-model="all_keywords"> {% trans 'Import all Keywords not only the ones already existing.' %}
+                </div>
+
+                <div class="form-group">
+                    <button type="button" class="btn btn-success" @click="importRecipe()" :disabled="importing_recipe">{% trans 'Import' %}</button>
+                </div>
+
+                <br/>
+                <br/>
+                <br/>
+            </form>
+        </template>
+
+        <template v-if="error !== undefined">
+            <div>
+
+                <div style="text-align: center">
+                    <i class="fas fa-robot fa-8x"></i><br/><br/>
+                    [[error.msg]]
+                </div>
+            </div>
+            <br/>
+            <div class="row">
+                <div class="col-md-8 offset-md-2">
+                    <div class="card border-info mb-6">
+                        <div class="card-body text-info">
+                            <h5 class="card-title">{% trans 'Information' %}</h5>
+                            <p class="card-text">
+                                {% blocktrans %} Only websites containing ld+json or microdata information can currently
+                                    be imported. Most big recipe pages support this. If you site cannot be imported but
+                                    you think
+                                    it probably has some kind of structured data feel free to post an example in the
+                                    github issues.{% endblocktrans %}
+                            </p>
+                            <a href="https://developers.google.com/search/docs/data-types/recipe" target="_blank"
+                               rel="noreferrer nofollow"
+                               class="card-link">{% trans 'Google ld+json Info' %}</a>
+                            <a href="https://github.com/vabene1111/recipes/issues" target="_blank"
+                               rel="noreferrer nofollow"
+                               class="card-link">{% trans 'GitHub Issues' %}</a>
+                            <a href="https://schema.org/Recipe" target="_blank" rel="noreferrer nofollow"
+                               class="card-link">{% trans 'Recipe Markup Specification' %}</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+    </div>
+
+    <script type="application/javascript">
+        let csrftoken = Cookies.get('csrftoken');
+        Vue.http.headers.common['X-CSRFToken'] = csrftoken;
+
+        Vue.component('vue-multiselect', window.VueMultiselect.default)
+
+        let app = new Vue({
+            components: {
+                Multiselect: window.VueMultiselect.default
+            },
+            delimiters: ['[[', ']]'],
+            el: '#app',
+            data: {
+                remote_url: '',
+                keywords: [],
+                keywords_loading: false,
+                units: [],
+                units_loading: false,
+                ingredients: [],
+                ingredients_loading: false,
+                recipe_data: undefined,
+                error: undefined,
+                loading: false,
+                all_keywords: false,
+                importing_recipe: false,
+            },
+            directives: {
+                tabindex: {
+                    inserted(el) {
+                        el.setAttribute('tabindex', 0);
+                    }
+                }
+            },
+            mounted: function () {
+                this.searchKeywords('')
+                this.searchUnits('')
+                this.searchIngredients('')
+            },
+            methods: {
+                makeToast: function (title, message, variant = null) {
+                    //TODO remove duplicate function in favor of central one
+                    this.$bvToast.toast(message, {
+                        title: title,
+                        variant: variant,
+                        toaster: 'b-toaster-top-center',
+                        solid: true
+                    })
+                },
+                loadRecipe: function () {
+                    this.recipe_data = undefined
+                    this.error = undefined
+                    this.loading = true
+                    this.$http.post("{% url 'api_recipe_from_url' %}", {'url' : this.remote_url}, {emulateJSON: true}).then((response) => {
+                        this.recipe_data = response.data;
+                        this.loading = false
+                    }).catch((err) => {
+                        this.error = err.data
+                        this.loading = false
+                        console.log(err)
+                        this.makeToast('{% trans 'Error' %}', '{% trans 'There was an error loading a resource!' %}' + err.bodyText, 'danger')
+                    })
+                },
+                importRecipe: function () {
+                    if (this.importing_recipe) {
+                        this.makeToast('{% trans 'Error' %}', '{% trans 'Already importing the selected recipe, please wait!' %}', 'danger')
+                        return;
+                    }
+                    this.importing_recipe = true
+                    this.$set(this.recipe_data, 'all_keywords', this.all_keywords)
+                    this.$http.post(`{% url 'data_import_url' %}`, this.recipe_data).then((response) => {
+                        window.location.href = response.data
+                    }).catch((err) => {
+                        console.log(err);
+                        this.makeToast('{% trans 'Error' %}', '{% trans 'An error occurred while trying to import this recipe!' %}' + err.bodyText, 'danger')
+                    })
+                },
+                deleteIngredient: function (i) {
+                    this.recipe_data.recipeIngredient = this.recipe_data.recipeIngredient.filter(item => item !== i)
+                },
+                addIngredient: function (i) {
+                    this.recipe_data.recipeIngredient.push({
+                        unit: {id: Math.random() * 1000, text: '{{ request.user.userpreference.default_unit }}'},
+                        amount: 0,
+                        ingredient: {id: Math.random() * 1000, text: ''}
+                    })
+                },
+                addIngredientType: function (tag, index) {
+                    index = index.replace('ingredient_', '')
+                    let new_ingredient = this.recipe_data.recipeIngredient[index]
+                    new_ingredient.ingredient = {'id': Math.random() * 1000, 'text': tag}
+                    this.ingredients.push(new_ingredient.ingredient)
+                    this.recipe_data.recipeIngredient[index] = new_ingredient
+                },
+                addUnitType: function (tag, index) {
+                    index = index.replace('unit_', '')
+                    let new_unit = this.recipe_data.recipeIngredient[index]
+                    new_unit.unit = {'id': Math.random() * 1000, 'text': tag}
+                    this.units.push(new_unit.unit)
+                    this.recipe_data.recipeIngredient[index] = new_unit
+                },
+                openUnitSelect: function (id) {
+                    let index = id.replace('unit_', '')
+                    if (this.recipe_data.recipeIngredient[index].unit !== null) {
+                        this.$set(app.$refs.unit[index].$data, 'search', this.recipe_data.recipeIngredient[index].unit.text)
+                    }
+                },
+                openIngredientSelect: function (id) {
+                    let index = id.replace('ingredient_', '')
+                    this.$set(this.$refs.ingredient[index].$data, 'search', this.recipe_data.recipeIngredient[index].ingredient.text)
+                },
+                searchKeywords: function (query) {
+                    this.keywords_loading = true
+                    this.$http.get("{% url 'dal_keyword' %}" + '?q=' + query).then((response) => {
+                        this.keywords = response.data.results;
+                        this.keywords_loading = false
+                    }).catch((err) => {
+                        console.log(err)
+                        this.makeToast('{% trans 'Error' %}', '{% trans 'There was an error loading a resource!' %}' + err.bodyText, 'danger')
+                    })
+                },
+                searchUnits: function (query) {
+                    this.units_loading = true
+                    this.$http.get("{% url 'dal_unit' %}" + '?q=' + query).then((response) => {
+                        this.units = response.data.results;
+                        if (this.recipe_data !== undefined) {
+                            for (let x of Array.from(this.recipe_data.recipeIngredient)) {
+                                if (x.unit !== null && x.unit.text !== '') {
+                                    this.units = this.units.filter(item => item.text !== x.unit.text)
+                                    this.units.push(x.unit)
+                                }
+                            }
+                        }
+                        this.units_loading = false
+                    }).catch((err) => {
+                        console.log(err)
+                        this.makeToast('{% trans 'Error' %}', '{% trans 'There was an error loading a resource!' %}' + err.bodyText, 'danger')
+                    })
+                },
+                searchIngredients: function (query) {
+                    this.ingredients_loading = true
+                    this.$http.get("{% url 'dal_food' %}" + '?q=' + query).then((response) => {
+                        this.ingredients = response.data.results
+                        if (this.recipe_data !== undefined) {
+                            for (let x of Array.from(this.recipe_data.recipeIngredient)) {
+                                if (x.ingredient.text !== '') {
+                                    this.ingredients = this.ingredients.filter(item => item.text !== x.ingredient.text)
+                                    this.ingredients.push(x.ingredient)
+                                }
+                            }
+                        }
+
+                        this.ingredients_loading = false
+                    }).catch((err) => {
+                        console.log(err)
+                        this.makeToast('{% trans 'Error' %}', '{% trans 'There was an error loading a resource!' %}' + err.bodyText, 'danger')
+                    })
+                },
+            }
+        });
+    </script>
+
+{% endblock %}

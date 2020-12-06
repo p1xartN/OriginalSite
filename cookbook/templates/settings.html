@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}{% trans 'Settings' %}{% endblock %}
+
+{% block extra_head %}
+    {{ preference_form.media }}
+{% endblock %}
+
+
+{% block content %}
+
+    <h3>
+        {% trans 'Settings' %}
+    </h3>
+
+    <br/>
+    <br/>
+
+    <h4><i class="fas fa-user-edit fa-fw"></i> {% trans 'Account' %}</h4>
+
+    <form action="." method="post">
+        {% csrf_token %}
+        {{ user_name_form|crispy }}
+        <button class="btn btn-success" type="submit" name="user_name_form"><i
+                class="fas fa-save"></i> {% trans 'Save' %}</button>
+    </form>
+
+    <form action="." method="post">
+        {% csrf_token %}
+        {{ password_form|crispy }}
+        <button class="btn btn-success" type="submit" name="password_form"><i
+                class="fas fa-save"></i> {% trans 'Save' %}</button>
+    </form>
+
+    <br/>
+    <br/>
+
+    <h4><i class="fas fa-language fa-fw"></i> {% trans 'Language' %}</h4>
+    <div class="row">
+        <div class="col-md-12">
+            <form action="{% url 'set_language' %}" method="post">{% csrf_token %}
+                <input class="form-control" name="next" type="hidden" value="{{ redirect_to }}">
+                <select name="language" class="form-control">
+                    {% get_current_language as LANGUAGE_CODE %}
+                    {% get_available_languages as LANGUAGES %}
+                    {% get_language_info_list for LANGUAGES as languages %}
+                    {% for language in languages %}
+                        <option value="{{ language.code }}"{% if language.code == LANGUAGE_CODE %} selected{% endif %}>
+                            {{ language.name_local }} ({{ language.code }})
+                        </option>
+                    {% endfor %}
+                </select>
+                <br/>
+                <button class="btn btn-success" type="submit"><i class="fas fa-save"></i> {% trans 'Save' %}</button>
+            </form>
+        </div>
+
+    </div>
+
+    <br/>
+    <br/>
+
+    <h4><i class="fas fa-palette fa-fw"></i> {% trans 'Style' %}</h4>
+
+    <form action="." method="post">
+        {% csrf_token %}
+        {{ preference_form|crispy }}
+        <button class="btn btn-success" type="submit" name="preference_form"><i
+                class="fas fa-save"></i> {% trans 'Save' %}</button>
+    </form>
+
+    <br/>
+    <br/>
+
+    <h4><i class="fas fa-terminal fa-fw"></i> {% trans 'API Token' %}</h4>
+    {% trans 'You can use both basic authentication and token based authentication to access the REST API.' %} <br/>
+    <br/>
+
+
+    <div class="input-group mb-3">
+        <input class="form-control" value="{{ api_token }}" id="id_token">
+        <div class="input-group-append">
+            <button class="input-group-btn btn btn-primary" onclick="copyToken()"><i
+                    class="far fa-copy"></i></button>
+        </div>
+    </div>
+    <br/>
+    {% trans 'Use the token as an Authorization header prefixed by the word token as shown in the following examples:' %}
+    <br/>
+    <code>Authorization: Token {{ api_token }}</code> {% trans 'or' %}<br/>
+    <code>curl -X GET http://your.domain.com/api/recipes/ -H 'Authorization: Token {{ api_token }}'</code>
+
+    <br/>
+    <br/>
+    <br/>
+    <br/>
+
+    <script type="application/javascript">
+        function copyToken() {
+            let token = $('#id_token');
+            token.select();
+            document.execCommand("copy");
+        }
+    </script>
+{% endblock %}
